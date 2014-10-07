@@ -19,7 +19,7 @@ module ActiveModel::Validations::HelperMethods
 end
 
 module StripAttributes
-  VALID_OPTIONS = [:only, :except, :allow_empty, :collapse_spaces, :regex]
+  VALID_OPTIONS = [:only, :except, :allow_empty, :collapse_spaces, :regex, :if]
   MULTIBYTE_SUPPORTED = "\u0020" == " "
 
   # Necessary because Rails has removed the narrowing of attributes using :only
@@ -43,6 +43,11 @@ module StripAttributes
         allow_empty     = options[:allow_empty]
         collapse_spaces = options[:collapse_spaces]
         regex           = options[:regex]
+        if_option       = options[:if]
+      end
+
+      if options && !options[:if].nil? && !if_option
+        return
       end
 
       attributes.each do |attr, value|

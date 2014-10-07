@@ -61,6 +61,16 @@ class StripRegexMockRecord < Tableless
   strip_attributes :regex => /[\^\%&\*]/
 end
 
+class StripWithIfFalse < Tableless
+  include MockAttributes
+  strip_attributes :if => false
+end
+
+class StripWithIfTrue < Tableless
+  include MockAttributes
+  strip_attributes :if => true
+end
+
 class StripAttributesTest < MiniTest::Unit::TestCase
   def setup
     @init_params = { :foo => "\tfoo", :bar => "bar \t ", :biz => "\tbiz ", :baz => "", :bang => " ", :foz => " foz  foz" }
@@ -192,4 +202,27 @@ class StripAttributesTest < MiniTest::Unit::TestCase
     record.valid?
     assert_equal "foo",      record.foo
   end
+
+  def test_should_not_strip_if_false
+    record = StripWithIfFalse.new(@init_params)
+    record.valid?
+    assert_equal "\tfoo",    record.foo
+    assert_equal "bar \t ",  record.bar
+    assert_equal "\tbiz ",   record.biz
+    assert_equal " foz  foz", record.foz
+    assert_equal "",         record.baz
+    assert_equal " ",        record.bang
+  end  
+
+  def test_should_strip_if_true
+    record = StripWithIfTrue.new(@init_params)
+    record.valid?
+    assert_equal "foo",      record.foo
+    assert_equal "bar",      record.bar
+    assert_equal "biz",      record.biz
+    assert_equal "foz  foz", record.foz
+    assert_nil record.baz
+    assert_nil record.bang
+  end  
+
 end
