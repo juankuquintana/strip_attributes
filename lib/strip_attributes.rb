@@ -43,10 +43,11 @@ module StripAttributes
         allow_empty     = options[:allow_empty]
         collapse_spaces = options[:collapse_spaces]
         regex           = options[:regex]
-        if_option       = options[:if]
+        if_option       = options[:if].nil? ? true : options[:if]
+        if_option       = (if_option==true || if_option==false) ? if_option : record.public_send(if_option)
       end
 
-      if options && !options[:if].nil? && !if_option
+      if options && !if_option
         return
       end
 

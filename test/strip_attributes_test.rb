@@ -71,6 +71,22 @@ class StripWithIfTrue < Tableless
   strip_attributes :if => true
 end
 
+class StripWithIfMethodFalse < Tableless
+  include MockAttributes
+  strip_attributes :if => :strip?
+  def strip?
+    false
+  end
+end
+
+class StripWithIfMethodTrue < Tableless
+  include MockAttributes
+  strip_attributes :if => :strip?
+  def strip?
+    true
+  end
+end
+
 class StripAttributesTest < MiniTest::Unit::TestCase
   def setup
     @init_params = { :foo => "\tfoo", :bar => "bar \t ", :biz => "\tbiz ", :baz => "", :bang => " ", :foz => " foz  foz" }
@@ -212,10 +228,32 @@ class StripAttributesTest < MiniTest::Unit::TestCase
     assert_equal " foz  foz", record.foz
     assert_equal "",         record.baz
     assert_equal " ",        record.bang
-  end  
+  end
 
   def test_should_strip_if_true
     record = StripWithIfTrue.new(@init_params)
+    record.valid?
+    assert_equal "foo",      record.foo
+    assert_equal "bar",      record.bar
+    assert_equal "biz",      record.biz
+    assert_equal "foz  foz", record.foz
+    assert_nil record.baz
+    assert_nil record.bang
+  end  
+
+  def test_should_not_strip_if_method_false
+    record = StripWithIfMethodFalse.new(@init_params)
+    record.valid?
+    assert_equal "\tfoo",    record.foo
+    assert_equal "bar \t ",  record.bar
+    assert_equal "\tbiz ",   record.biz
+    assert_equal " foz  foz", record.foz
+    assert_equal "",         record.baz
+    assert_equal " ",        record.bang
+  end
+
+  def test_should_strip_if_method_true
+    record = StripWithIfMethodTrue.new(@init_params)
     record.valid?
     assert_equal "foo",      record.foo
     assert_equal "bar",      record.bar
