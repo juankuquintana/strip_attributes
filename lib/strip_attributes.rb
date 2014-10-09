@@ -6,6 +6,13 @@ module ActiveModel::Validations::HelperMethods
     StripAttributes.validate_options(options)
 
     before_validation do |record|
+      if options
+        if_option = options[:if].nil? ? true : options[:if]
+        if_option = (if_option==true || if_option==false) ? if_option : record.public_send(if_option)
+        if options && !if_option
+          next
+        end
+      end
       StripAttributes.strip(record, options)
     end
   end
@@ -19,7 +26,7 @@ module ActiveModel::Validations::HelperMethods
 end
 
 module StripAttributes
-  VALID_OPTIONS = [:only, :except, :allow_empty, :collapse_spaces, :regex, :if]
+  VALID_OPTIONS = [:only, :except, :allow_empty, :collapse_spaces, :regex, :strip, :non_breaking, :if]
   MULTIBYTE_SUPPORTED = "\u0020" == " "
 
   # Necessary because Rails has removed the narrowing of attributes using :only
@@ -40,29 +47,26 @@ module StripAttributes
       attributes = self.narrow(record.attributes, options)
 
       if options
-        allow_empty     = options[:allow_empty]
-        collapse_spaces = options[:collapse_spaces]
+        allow_empty     = options[:allow_empty].nil? ? false : options[:allow_empty]
+        collapse_spaces = options[:collapse_spaces].nil? ? false : options[:collapse_spaces]
         regex           = options[:regex]
-        if_option       = options[:if].nil? ? true : options[:if]
-        if_option       = (if_option==true || if_option==false) ? if_option : record.public_send(if_option)
-      end
-
-      if options && !if_option
-        return
+        strip           = options[:strip].nil? ? false : options[:strip]
+        non_breaking    = options[:non_breaking].nil? ? true : options[:non_breaking]
       end
 
       attributes.each do |attr, value|
         original_value = value
 
         if value.respond_to?(:strip)
-          value = (value.blank? && !allow_empty) ? nil : value.strip
+          value.strip! if !value.nil? && strip
+          value = (value.empty? && !allow_empty) ? nil : value
         end
 
         if regex && value.respond_to?(:gsub!)
           value.gsub!(regex, '')
         end
 
-        if MULTIBYTE_SUPPORTED
+        if MULTIBYTE_SUPPORTED && non_breaking
           # Remove leading and trailing Unicode invisible and whitespace characters.
           # The POSIX character class [:space:] corresponds to the Unicode class Z
           # ("separator"). We also include the following characters from Unicode class
@@ -75,8 +79,9 @@ module StripAttributes
           #   U+2060 WORD JOINER
           #   U+FEFF ZERO WIDTH NO-BREAK SPACE
           if value.respond_to?(:gsub!)
-            value.gsub!(/\A[[:space:]\u180E\u200B\u200C\u200D\u2060\uFEFF]+|[[:space:]\u180E\u200B\u200C\u200D\u2060\uFEFF]+\z/, '')
+            value.gsub!(/\A[\u180E\u200A\u200B\u200C\u200D\u2060\uFEFF]+|[\u180E\u200A\u200B\u200C\u200D\u2060\uFEFF]+\z/, '')
           end
+          value.strip! if !value.nil? && strip && value.respond_to?(:strip)
         end
 
         if collapse_spaces && value.respond_to?(:squeeze!)

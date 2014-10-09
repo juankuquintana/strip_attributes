@@ -8,48 +8,49 @@ module MockAttributes
     base.attribute :baz
     base.attribute :bang
     base.attribute :foz
+    base.attribute :fuz
   end
 end
 
 class StripAllMockRecord < Tableless
   include MockAttributes
-  strip_attributes
+  strip_attributes :strip => :true
 end
 
 class StripOnlyOneMockRecord < Tableless
   include MockAttributes
-  strip_attributes :only => :foo
+  strip_attributes :only => :foo, :strip => :true
 end
 
 class StripOnlyThreeMockRecord < Tableless
   include MockAttributes
-  strip_attributes :only => [:foo, :bar, :biz]
+  strip_attributes :only => [:foo, :bar, :biz], :strip => :true
 end
 
 class StripExceptOneMockRecord < Tableless
   include MockAttributes
-  strip_attributes :except => :foo
+  strip_attributes :except => :foo, :strip => :true
 end
 
 class StripExceptThreeMockRecord < Tableless
   include MockAttributes
-  strip_attributes :except => [:foo, :bar, :biz]
+  strip_attributes :except => [:foo, :bar, :biz], :strip => :true
 end
 
 class StripAllowEmpty < Tableless
   include MockAttributes
-  strip_attributes :allow_empty => true
+  strip_attributes :allow_empty => true, :strip => :true
 end
 
 class CollapseDuplicateSpaces < Tableless
   include MockAttributes
-  strip_attributes :collapse_spaces => true
+  strip_attributes :collapse_spaces => true, :strip => :true
 end
 
 class CoexistWithOtherValidations < Tableless
   attribute :number, :type => Integer
 
-  strip_attributes
+  strip_attributes :strip => :true
   validates :number, {
     :numericality => { :only_integer => true,  :greater_than_or_equal_to => 1000 },
     :allow_blank => true
@@ -58,7 +59,7 @@ end
 
 class StripRegexMockRecord < Tableless
   include MockAttributes
-  strip_attributes :regex => /[\^\%&\*]/
+  strip_attributes :regex => /[\^\%&\*]/, :strip => :true
 end
 
 class StripWithIfFalse < Tableless
@@ -68,7 +69,7 @@ end
 
 class StripWithIfTrue < Tableless
   include MockAttributes
-  strip_attributes :if => true
+  strip_attributes :strip => :true, :if => true
 end
 
 class StripWithIfMethodFalse < Tableless
@@ -81,17 +82,26 @@ end
 
 class StripWithIfMethodTrue < Tableless
   include MockAttributes
-  strip_attributes :if => :strip?
+  strip_attributes :strip => :true, :if => :strip?
   def strip?
     true
   end
 end
 
+class SkipStripAllMockRecord < Tableless
+  include MockAttributes
+  strip_attributes :strip => false
+end
+
+class DoStripAllMockRecord < Tableless
+  include MockAttributes
+  strip_attributes :strip => true
+end
+
 class StripAttributesTest < MiniTest::Unit::TestCase
   def setup
-    @init_params = { :foo => "\tfoo", :bar => "bar \t ", :biz => "\tbiz ", :baz => "", :bang => " ", :foz => " foz  foz" }
+    @init_params = { :foo => "\tfoo", :bar => "bar \t ", :biz => "\tbiz ", :baz => "", :bang => " ", :foz => " foz  foz", :fuz => " foz  foz " }
   end
-
   def test_should_exist
     assert Object.const_defined?(:StripAttributes)
   end
@@ -261,6 +271,28 @@ class StripAttributesTest < MiniTest::Unit::TestCase
     assert_equal "foz  foz", record.foz
     assert_nil record.baz
     assert_nil record.bang
-  end  
+  end
 
+  def test_should_not_strip_all_fields
+    record = SkipStripAllMockRecord.new(@init_params)
+    record.valid?
+    assert_equal "\tfoo",      record.foo
+    assert_equal "bar \t ",    record.bar
+    assert_equal "\tbiz ",     record.biz
+    assert_equal " foz  foz",  record.foz
+    assert_equal " foz  foz ", record.fuz
+    assert_equal " ",          record.bang
+    assert_nil record.baz
+  end
+
+  def test_should_strip_all_fields
+    record = DoStripAllMockRecord.new(@init_params)
+    record.valid?
+    assert_equal "foo",      record.foo
+    assert_equal "bar",      record.bar
+    assert_equal "biz",      record.biz
+    assert_equal "foz  foz", record.foz
+    assert_nil record.baz
+    assert_nil record.bang
+  end
 end
